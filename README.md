@@ -52,4 +52,6 @@ Build a simple online food ordering application for a restaurant.
 1. The administrator can create, edit and delete any amount of courses;
 1. The administrator can list the orders;
 1. The administrator can view the details of an order;
+1. Every regular user can list his own orders;
+1. Every regular user can view the details of any of his own orders;
 1. Payment is cash only on delivery.
