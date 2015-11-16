@@ -1,17 +1,24 @@
 var noteFormModal = React.createClass({
-	componentDidMount: function() {
+	getInitialState: function(){
+		return { noteid: null, title: null, body: null, datetime: null, userid: null};
+	},
+	componentDidMount: function(){
 		$(this.refs.root).modal({backdrop: 'static', keyboard: false, show: false});
 	},
-	componentWillUnmount: function() {
+	componentWillUnmount: function(){
 		$(this.refs.root).off('hidden', this.handleHidden);
 	},
-	close: function() {
+	close: function(){
+		this.replaceState(this.getInitialState());
+
 		$(this.refs.root).modal('hide');
 	},
-	open: function(){
+	open: function(note){
+		this.setState(note);
+
 		$(this.refs.root).modal('show');
 	},
-	render: function() {
+	render: function(){
 		return (
 			<div className="modal fade" ref="root">
 				<div className="modal-dialog">
@@ -24,7 +31,7 @@ var noteFormModal = React.createClass({
 									onClick={this.handleCancel}>
 									&times;
 								</button>
-								<h3>{this.props.title}</h3>
+								<h3>Note</h3>
 							</div>
 							<div className="modal-body">
 								<div className="row">
@@ -32,7 +39,7 @@ var noteFormModal = React.createClass({
 										<label className="control-label" htmlFor="title">Title:</label>
 									</div>
 									<div className="col-sm-8">
-										<input id="title" type="text" className="form-control input-sm" placeholder="Write your note title" value={this.props.note.title} onChange={this.titleChange} required />
+										<input id="title" type="text" className="form-control input-sm" placeholder="Write your note title" value={this.state.title} onChange={this.handleChange.bind(this, "title")} required />
 									</div>
 								</div>
 								<div className="row">
@@ -40,13 +47,13 @@ var noteFormModal = React.createClass({
 										<label className="control-label" htmlFor="body">Note:</label>
 									</div>
 									<div className="col-sm-8">
-										<textarea id="body" type="text" className="form-control input-sm" placeholder="Write your note title" rows="8" value={this.props.note.body} required></textarea>
+										<textarea id="body" type="text" className="form-control input-sm" placeholder="Write your note body" rows="8" value={this.state.body} onChange={this.handleChange.bind(this, "body")} required></textarea>
 									</div>
 								</div>
 							</div>
 							<div className="modal-footer">
 								<button type="button" className="btn btn-sm btn-default" onClick={this.handleCancel}>Cancel</button>
-								<button type="submit" className="btn btn-sm btn-success">Add Note</button>
+								<button type="submit" className="btn btn-sm btn-success">Save</button>
 							</div>
 						</form>
 					</div>
@@ -54,18 +61,30 @@ var noteFormModal = React.createClass({
 			</div>
 		);
 	},
-	titleChange: function(e){
-		this.props.edit_note.title = e.target.value;
+	handleChange: function(field, e){
+		var nextState = {};
+		nextState[field] = e.target.value;
+		this.setState(nextState);
 	},
-	handleCancel: function() {
-		if (this.props.onCancel) {
-			this.props.onCancel();
-		}
+	handleCancel: function(){
+		this.close();
 	},
-	handleConfirm: function() {
-		if (this.props.onConfirm) {
-			this.props.onConfirm();
-		}
+	onSubmit: function(e){
+		e.preventDefault();
+
+		var reactClass = this;
+		$.ajax({
+			url: "/note.json",
+			contentType: "application/json",
+			type: this.state.noteid ? "put" : "post",
+			data: JSON.stringify(this.state),
+			dataType: "json",
+			success: function(response, textStatus, jqXHR){
+				reactClass.close();
+
+				reactClass.props.update();
+			}
+		});
 	}
 });
 window.noteFormModal = noteFormModal;

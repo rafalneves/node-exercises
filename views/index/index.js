@@ -1,4 +1,14 @@
 var IndexPage = React.createClass({
+    getInitialState: function(){
+        return { data: new Array() };
+    },
+    componentDidMount: function(){
+        $.get("/notes.json", function(result){
+            if(this.isMounted()){
+                this.setState(result);
+            }
+        }.bind(this));
+    },
     logout: function(){
         $.ajax({
             url: "/auth.json",
@@ -17,8 +27,7 @@ var IndexPage = React.createClass({
         modal = (
             <window.noteFormModal
                 ref="modal"
-                title="Add Note"
-                note={{ title: "asdasd" }}></window.noteFormModal>
+                update={this.update}></window.noteFormModal>
         );
         return <div>
             <header style={{ backgroundColor: "#000", color: "#FFF", textAlign: "right", padding: "5px 10px" }}>
@@ -27,58 +36,133 @@ var IndexPage = React.createClass({
             <div className="container">
                 <div className="row" style={{marginTop: "20px"}}>
                     <div className="col-sm-9">
-                        there
+                        <Notes data={this.state.data} edit={this.edit} remove={this.remove} tag={this.tag} removeTag={this.removeTag} />
                     </div>
                     <div className="col-sm-3">
-                        <button type="button" className="btn btn-sm btn-link" onClick={this.openModal}>Add Note</button>
+                        <button type="button" className="btn btn-sm btn-link" onClick={this.openModal.bind(null, {})}>Add Note</button>
                     </div>
                 </div>
             </div>
             {modal}
         </div>
     },
-    openModal: function(){
-        this.refs.modal.open();
+    openModal: function(note){
+        this.refs.modal.open(note);
     },
-    closeModal: function(){
-        this.refs.modal.close();
+    update: function(){
+        $.get("/notes.json", function(result){
+            this.setState(result);
+        }.bind(this));
     },
-    addNote: function(){
+    edit: function(noteId){
+        var note = null;
+        for(var i = 0; i < this.state.data.length; i++)
+            if(this.state.data[i].noteid == noteId){
+                note = this.state.data[i];
+
+                break;
+            }
+
+        this.openModal(note);
+    },
+    remove: function(noteId){
+        var notes = this.state.data;
+        var newNotes = notes.filter(function(item){
+            return item.noteid != noteId;
+        });
+
+        this.setState({data: newNotes});
+
         $.ajax({
-            url: "/auth.json",
+            url: "/note.json",
             contentType: "application/json",
-            type: "post",
-            data: JSON.stringify({
-                hash: $.md5(authData.username + $.md5(authData.password))
-            }),
-            dataType: "json",
-            success: function(response, textStatus, jqXHR){
-                this.refs.modal.close();
-            },
-            error: function(jqXHR, textStatus, errorThrown){
-                switch(jqXHR.responseText){
-                    case "WrongData":
-                        ReactDOM.render(
-                            React.createElement(errorTemplate, {
-                                error: "Wrong login. Please try again."
-                            }),
-                            document.getElementById("error")
-                        );
-                        break;
-                    default:
-                        ReactDOM.render(
-                            React.createElement(errorTemplate, {
-                                error: "Unknown Error"
-                            }),
-                            document.getElementById("error")
-                        );
+            type: "delete",
+            data: JSON.stringify({ noteid: noteId }),
+            dataType: "json"
+        });
+    },
+    tag: function(noteId, e){
+        if(e.keyCode == 13){
+            var reactClass = this;
+            $.ajax({
+                url: "/note/tag.json",
+                contentType: "application/json",
+                type: "post",
+                data: JSON.stringify({noteid: noteId, tag: e.target.value}),
+                dataType: "json",
+                success: function(response, textStatus, jqXHR){
+                    e.target.value = null;
+                    reactClass.update();
+                }
+            });
+        }
+    },
+    removeTag: function(tag, noteId){
+        for(var i = 0; i < this.state.data.length; i++)
+            if(this.state.data[i].noteid == noteId){
+                for(var y = 0; y < this.state.data[i].tags.length; y++){
+                    if(this.state.data[i].tags[y].tag == tag){
+                        this.state.data[i].tags.splice(y, 1);
 
                         break;
+                    }
                 }
+                break;
             }
+        this.setState({data: this.state.data});
+
+        $.ajax({
+            url: "/note/tag.json",
+            contentType: "application/json",
+            type: "delete",
+            data: JSON.stringify({noteid: noteId, tag: tag}),
+            dataType: "json"
         });
     }
 });
+var Notes = React.createClass({
+    render: function() {
+        var remove = this.props.remove, edit = this.props.edit, tag = this.props.tag, removeTag = this.props.removeTag;
+        return (<div>
+            { this.props.data.map(function(item) {
+                    return <article key={item.noteid}>
+                        <header>
+                            <h3>{item.title}</h3>
+                            <div style={{float: "right"}}>
+                                <i style={{cursor: "pointer", padding: "3px"}} className="fa fa-pencil-square-o" onClick={edit.bind(null, item.noteid)}></i>
+                                <i style={{cursor: "pointer", padding: "3px"}} className="fa fa-trash-o" onClick={remove.bind(null, item.noteid)}></i>
+                            </div>
+                        </header>
+                        <div>{item.body}</div>
+                        <footer>
+                            <div>{item.datetime}</div>
+                            <div className="row">
+                                <div className="col-sm-10">
+                                    <Tags tags={item.tags} removeTag={removeTag} noteid={item.noteid} />
+                                </div>
+                                <div className="col-sm-2 col-sm-offset-10">
+                                    <input type="text" className="form-control input-sm" placeholder="Tag" onKeyUp={tag.bind(this, item.noteid)} />
+                                </div>
+                            </div>
+                        </footer>
+                    </article>
+                })
+            }
+        </div>);
+    }
+});
+var Tags = React.createClass({
+    render: function() {
+        var removeTag = this.props.removeTag, noteid = this.props.noteid;
+        return (<span>
+            { this.props.tags.map(function(item, index){
+                    return <label key={index} style={{margin: "3px", fontSize: "11px"}} className="label label-warning">{item.tag} <i style={{cursor: "pointer", padding: "3px"}} className="fa fa-times" onClick={removeTag.bind(null, item.tag, noteid)}></i></label>
+                })
+            }
+        </span>);
+    }
+});
+
 var errorTemplate = React.createClass({
     render: function(){
         return <div className="row">

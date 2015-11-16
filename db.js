@@ -14,6 +14,16 @@ var data = {
 			username: "adam@msn.com",
 			password: "827ccb0eea8a706c4c34a16891f84e7b"
 		}
+	],
+	notes: [
+		{
+			noteid: 1,
+			title: "Note 1",
+			body: "Note 1 body",
+			datetime: new Date().toUTCString(),
+			userid: 1,
+			tags: new Array()
+		}
 	]
 };
 
@@ -22,6 +32,7 @@ exports.getData = function(className, key, value, callback){
 		if(!key)
 			callback(null, data[className]);
 		else{
+			var results = new Array();
 			for(var i = 0; i < data[className].length; i++)
 				if(data[className][i][key] == value)
 					results.push(data[className][i])
@@ -30,20 +41,20 @@ exports.getData = function(className, key, value, callback){
 	else
 		callback("No class with that name.")
 }
-exports.setData = function(className, data, callback){
+exports.setData = function(className, reqData, callback){
 	if(data[className]){
-		data[className].push(data);
+		data[className].push(reqData);
 
 		callback(null);
 	}else
 		callback("No class with that name.")
 }
-exports.upData = function(className, key, value, data, callback){
+exports.editData = function(className, key, value, reqData, callback){
 	if(data[className]){
 		var upd = false;
 		for(var i = 0; i < data[className].length; i++)
-			if(data[className][i][key] == data[key]){
-				data[className][i] = data;
+			if(data[className][i][key] == reqData[key]){
+				data[className][i] = reqData;
 
 				upd = true;
 				callback(null);
@@ -60,7 +71,7 @@ exports.delData = function(className, key, value, callback){
 		var upd = false;
 		for(var i = 0; i < data[className].length; i++)
 			if(data[className][i][key] == value){
-				data[className].splice(i, -1);
+				data[className].splice(i, 1);
 
 				upd = true;
 				callback(null);

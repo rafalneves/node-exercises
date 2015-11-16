@@ -33,6 +33,7 @@ GLOBAL.db = require("./db.js");
 var Auth = require("./lib/auth.js");
 
 var User = require("./lib/user.js");
+var note = require("./lib/note.js");
 
 var app = express();
 app.use(cookieParser());
@@ -50,6 +51,17 @@ app.get("/user.:format(json)", function(request, response){
 	if(request.user.data && request.user.data.userid){
 		response.writeHead(200, { "Content-Type": "application/json" });
 		response.end(new Buffer(JSON.stringify({ userid: request.user.data.userid, name:  request.user.data.name})));
+	}else{
+		response.writeHead(403, { "Content-Type": "text/plain" });
+		response.end("UnknownUser");
+	}
+});
+app.get("/notes.:format(json)", function(request, response){
+	if(request.user.data && request.user.data.userid){
+		db.getData("notes", "userid", request.user.data.userid, function(error, data){
+			response.writeHead(200, { "Content-Type": "application/json" });
+			response.end(new Buffer(JSON.stringify({ data: data })));
+		});
 	}else{
 		response.writeHead(403, { "Content-Type": "text/plain" });
 		response.end("UnknownUser");
@@ -75,7 +87,89 @@ app.post("/auth.:format(json)", function(request, response){
 		}
 	});
 });
+app.post("/note.:format(json)", function(request, response){
+	if(request.user.data && request.user.data.userid)
+		note.setNote(request, response, request.body, function(error){
+			if(error){
+				response.writeHead(403, { "Content-Type": "text/plain" });
+				response.end("SomethingWrong");
+			}else{
+				response.writeHead(201, { "Content-Type": "application/json" });
+				response.end(new Buffer(JSON.stringify({ data: request.body })));
+			}
+		});
+	else{
+		response.writeHead(401, { "Content-Type": "text/plain" });
+		response.end("Unauthorized");
+	}
+});
+app.post("/note/tag.:format(json)", function(request, response){
+	if(request.user.data && request.user.data.userid)
+		note.setNoteTage(request, response, request.body, function(error){
+			if(error){
+				response.writeHead(403, { "Content-Type": "text/plain" });
+				response.end("SomethingWrong");
+			}else{
+				response.writeHead(201, { "Content-Type": "application/json" });
+				response.end(new Buffer(JSON.stringify({ data: request.body })));
+			}
+		});
+	else{
+		response.writeHead(401, { "Content-Type": "text/plain" });
+		response.end("Unauthorized");
+	}
+});
 
+app.put("/note.:format(json)", function(request, response){
+	if(request.user.data && request.user.data.userid)
+		note.editNote(request, response, request.body, function(error){
+			if(error){
+				response.writeHead(403, { "Content-Type": "text/plain" });
+				response.end("SomethingWrong");
+			}else{
+				response.writeHead(200, { "Content-Type": "application/json" });
+				response.end(new Buffer(JSON.stringify({ data: request.body })));
+			}
+		});
+	else{
+		response.writeHead(401, { "Content-Type": "text/plain" });
+		response.end("Unauthorized");
+	}
+});
+
+
+app.delete("/note.:format(json)", function(request, response){
+	if(request.user.data && request.user.data.userid)
+		note.deleteNote(request, response, request.body, function(error){
+			if(error){
+				response.writeHead(403, { "Content-Type": "text/plain" });
+				response.end("SomethingWrong");
+			}else{
+				response.writeHead(200, { "Content-Type": "application/json" });
+				response.end(new Buffer(JSON.stringify({})));
+			}
+		});
+	else{
+		response.writeHead(401, { "Content-Type": "text/plain" });
+		response.end("Unauthorized");
+	}
+});
+app.delete("/note/tag.:format(json)", function(request, response){
+	if(request.user.data && request.user.data.userid)
+		note.delNoteTag(request, response, request.body, function(error){
+			if(error){
+				response.writeHead(403, { "Content-Type": "text/plain" });
+				response.end("SomethingWrong");
+			}else{
+				response.writeHead(200, { "Content-Type": "application/json" });
+				response.end(new Buffer(JSON.stringify({ data: request.body })));
+			}
+		});
+	else{
+		response.writeHead(401, { "Content-Type": "text/plain" });
+		response.end("Unauthorized");
+	}
+});
 app.delete("/auth.:format(json)", function(request, response){
 	request.user.logout(request, response, function(){
 		response.writeHead(200, { "Content-Type": "application/json" });
